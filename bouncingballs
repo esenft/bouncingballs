@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Ball Simulation</title>
+    <style>
+        body { text-align: center; }
+        canvas { background: #ddd; display: block; margin: 0 auto; }
+        .controls { margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Elastic Ball Simulation</h1>
+    <div class="controls">
+        <label>Time Step: <input type="range" id="timeStep" min="1" max="10" value="5"></label>
+        <label>Gravity: <input type="range" id="gravity" min="-1" max="1" step="0.1" value="0"></label>
+        <label>Elasticity: <input type="range" id="elasticity" min="0" max="1" step="0.1" value="0.9"></label>
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 600;
+        canvas.height = 400;
+        
+        let balls = [];
+        
+        class Ball {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 10;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            }
+            update(dt, gravity) {
+                this.vy += gravity * dt;
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) this.vx *= -1;
+                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+        
+        function detectCollisions(elasticity) {
+            for (let i = 0; i < balls.length; i++) {
+                for (let j = i + 1; j < balls.length; j++) {
+                    let dx = balls[j].x - balls[i].x;
+                    let dy = balls[j].y - balls[i].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let minDist = balls[i].radius + balls[j].radius;
+                    if (distance < minDist) {
+                        let angle = Math.atan2(dy, dx);
+                        let speed1 = Math.sqrt(balls[i].vx ** 2 + balls[i].vy ** 2);
+                        let speed2 = Math.sqrt(balls[j].vx ** 2 + balls[j].vy ** 2);
+                        let dir1 = Math.atan2(balls[i].vy, balls[i].vx);
+                        let dir2 = Math.atan2(balls[j].vy, balls[j].vx);
+                        balls[i].vx = speed2 * Math.cos(dir2 - angle) * elasticity;
+                        balls[i].vy = speed2 * Math.sin(dir2 - angle) * elasticity;
+                        balls[j].vx = speed1 * Math.cos(dir1 - angle) * elasticity;
+                        balls[j].vy = speed1 * Math.sin(dir1 - angle) * elasticity;
+                    }
+                }
+            }
+        }
+        
+        function update() {
+            let dt = document.getElementById("timeStep").value / 5;
+            let gravity = parseFloat(document.getElementById("gravity").value);
+            let elasticity = parseFloat(document.getElementById("elasticity").value);
+            balls.forEach(ball => ball.update(dt, gravity));
+            detectCollisions(elasticity);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            balls.forEach(ball => ball.draw());
+        }
+        
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        
+        canvas.addEventListener("click", (e) => {
+            let rect = canvas.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            balls.push(new Ball(x, y));
+        });
+        
+        loop();
+    </script>
+</body>
+</html>
